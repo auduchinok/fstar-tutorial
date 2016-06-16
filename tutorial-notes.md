@@ -60,6 +60,7 @@ In addition to inferring types of expressions F* infers side effects.
 val canRead : filename -> bool (* ML type inference *)
 val canRead : filename -> Tot bool (* F* type inference *)
 ```
+
 `a' -> bool` is a shortcut for `a' -> ML bool`
 
 Effect types:
@@ -79,9 +80,9 @@ let max a b = if a > b then a else b
 
 assume val read : filename -> ML string
 ```
-Function arguments cannot have any side effect, thus only function result has it.
+Function arguments cannot have any side effect, thus only function result has an effect type.
 
-Default effect type for non-Tot is ML.
+Default effect type for non-`Tot` is `ML`.
 
 ```fsharp
 let rec loop i = i + loop (i - 1) (* will be infered to (int -> ML int) or just (int -> int) *)
@@ -118,7 +119,7 @@ let b = assert (forall x y. max x y >= x
 A lemma is a *ghost total function*, which always return `unit`. The result of ghost function however carries useful info.
 
 ```fsharp
-val factIsPositive : x:nat -> (u:unit{fact x > 0})
+val factIsPositive : x:nat -> GTot (u:unit{fact x > 0})
 let rec factIsPositive n =
   match n with
   | 0 -> ()
@@ -126,7 +127,7 @@ let rec factIsPositive n =
 ```
 Lemma has a *dependent function type* because the type of its result depends on the value of the parameter.
 
-The type of the result of `factIsPositive 0`, `Tot (u:unit{fact 0 > 0})`, is different from the result of `factIsPositive 1`.
+The type of the result of `factIsPositive 0`, `GTot (u:unit{fact 0 > 0})`, is different from the result of `factIsPositive 1`.
 
 ```fsharp
 (* More general function definition *)
@@ -139,7 +140,7 @@ Each function parameter `xi` can freely appear in its scope after the first arro
 
 ```fsharp
 (* full type *)
-val factIsIncreasing : x:(y:nat{x > 2}) -> GTot (u:unit{fact x > x})
+val factIsIncreasing : x:(y:nat{y > 2}) -> GTot (u:unit{fact x > x})
 
 (* simplify parameter *)
 val factIsIncreasing : x:nat{x > 2} -> GTot (u:unit{fact x > x})
@@ -147,7 +148,7 @@ val factIsIncreasing : x:nat{x > 2} -> GTot (u:unit{fact x > x})
 (* use lemma keyword *)
 val factIsIncreasion : x:nat{x > 2} -> Lemma (fact x > x)
 
-(* use pre- & post- conditions *)
+(* use pre- & post- conditions, less types cluttering *)
 val factIsIncreasing : x:nat -> Lemma (requires (x > 2)) (ensures (fact x > x))
 
 let rec factIsIncreasing n =
@@ -156,7 +157,7 @@ let rec factIsIncreasing n =
   | _ -> factIsIncreasing (n - 1)
 ```
 
-F* ensures that recursive calls in Tot function will terminate:
+F* ensures internally that recursive calls in Tot function will terminate:
 
 ```fsharp
 let factIsIncreasing : n:nat{2 < n && n < x} -> Lemma (fact n > n)
@@ -165,6 +166,9 @@ let factIsIncreasing : n:nat{2 < n && n < x} -> Lemma (fact n > n)
 Another inductional prove example:
 
 ```fsharp
+type nat = x:int{x >= 0}
+type pos = x:nat{x >= 1}
+
 val fib : nat -> Tot pos
 let rec fib n =
   if n <= 1 then 1 else fib (n - 1) + fib (n - 2)
@@ -175,7 +179,7 @@ let rec fibIsIncreasing n =
   | 2 -> ()
   | _ -> fibIsIncreasing (n - 1)
   
-  (* induction step simplified *)
+  (* induction step simplified, using admit() *)
   val fibIsIncreasing : n:nat{n >= 2} -> Lemma (fib n >= n)
 let rec fibIsIncreasing n =
   match n with
