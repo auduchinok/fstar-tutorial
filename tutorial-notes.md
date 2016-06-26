@@ -190,3 +190,91 @@ let rec fibIsIncreasing n =
     val fibIsIncreasing : n:nat{n >= 2} -> Lemma (fib n >= n)
   let rec fibIsIncreasing n = by_induction_on n fibIsIncreasing
 ```
+
+### `bool` vs `Type`
+
+Refinement types have form of `x:t{phi(x)}` where `phi` is a type, a *predicate on the value* `x:t`. When using boolean value as a predicate it automatically being coerced.
+
+```fsharp
+b2t (b:bool) : Type = (b == true)
+```
+
+`==` is a type constructor for equality predicate, it's not equal to `=`. `==` is heterogeneous, while `=` is homogeneous.
+
+Boolean functions: `&&`, `||`, `not`.
+
+The propositional connectives: `/\`, `\/`, `~`, `==>`, `<==>`.
+
+Quantifiers: `forall`, `exists`.
+
+```fsharp
+canRead e /\ forall x. canWrite x ==> canRead x
+
+(* full form *)
+b2t(canRead e) /\ forall x. b2t(canWrite x) ==> b2t(canRead x)
+```
+
+### Simple inductive types
+
+Constructors names capitalized. Default constructor effect type if Tot.
+
+```fsharp
+type myList 'a =
+  | Nil  : myList 'a
+  | Cons : hd: 'a -> tl: myList 'a -> myList 'a
+```
+
+`list` is defined in standard prelude (`FStar.List`), has same syntax-suggar as in F#.
+
+```fsharp
+type nat = x:int{x>=0}
+
+val length : list 'a -> Tot nat
+let rec length l =
+  match l with
+    | [] -> 0
+    | hd :: tl -> 1 + length tl
+
+val append: l1:list 'a -> l2:list 'a -> res:list 'a{length res = length l1 + length l2}
+val append: list 'a -> list 'a -> Tot (list 'a)
+let rec append l1 l2 =
+  match l1 with
+    | [] -> l2
+    | hd :: tl -> hd :: append tl l2
+
+val appendLength: l1: list 'a -> l2: list 'a -> GTot (u:unit{length (append l1 l2) = length l1 + length l2})
+val appendLength: l1: list 'a -> l2: list 'a -> Lemma (length (append l1 l2) = length l1 + length l2)
+let rec appendLength l1 l2 =
+  match l1 with
+    | [] -> ()
+    | hd :: tl -> appendLength tl l2
+
+val mem: 'a -> list 'a -> Tot bool
+let rec mem a l =
+  match l with
+    | [] -> false
+    | hd :: tl -> hd = a || mem a tl
+
+val appendMem: l1: list 'a -> l2: list 'a -> a: 'a -> Lemma (mem a (append l1 l2) <==> mem a l1 || mem a l2)
+let rec appendMem l1 l2 a =
+  match l1 with
+    | hd :: tl -> appendMem tl l2 a
+    | [] ->
+        match l2 with
+          | [] -> ()
+          | hd :: tl -> appendMem [] tl a
+
+(* given solution, why it is enough? *)
+val appendMemGiven: l1: list 'a -> l2: list 'a -> a: 'a -> Lemma (mem a (append l1 l2) <==> mem a l1 || mem a l2)
+let rec appendMemGiven l1 l2 a =
+  match l1 with
+    | [] -> ()
+    | hd :: tl -> appendMemGiven tl l2 a
+```
+
+### *intrinsic* and *extrinsic* constraints
+
+* *intrinsic* proving uses types refiniments
+* *extrinsic* proving uses lemmas
+
+It's not always possible to prove properties using *intrinsic* constraints. Example property is that double-reversing a list is the identity function.
