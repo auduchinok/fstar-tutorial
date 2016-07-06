@@ -7,18 +7,18 @@ Main definition is optional.
 ```fsharp
 module FileName
   type filename = string // type synonym
-  
+
 module ACLs
   open FileName // filename instead of FileName.filename
-  
+
   let canWrite (f : filename) =
     match f with
     | "demo/tempfile" -> true
     | _ -> false
-    
+
   let canRead (f : filename) =
     canWrite f || f = "demo/README"
-  
+
 ```
 
 ### Refinement types
@@ -43,13 +43,13 @@ F* allows to use value if it's type is checked at runtime.
 
 ```fsharp
  exception InvalidRead
- 
+
  val checkedRead : filename -> string
   let checkedRead f =
     if canRead f then read f else raise InvalidRead
 ```
 
-### Infered types and effects
+### Inferred types and effects
 
 In addition to inferring types of expressions F* infers side effects.
 
@@ -85,7 +85,7 @@ Function arguments cannot have any side effect, thus only function result has an
 Default effect type for non-`Tot` is `ML`.
 
 ```fsharp
-let rec loop i = i + loop (i - 1) (* will be infered to (int -> ML int) or just (int -> int) *)
+let rec loop i = i + loop (i - 1) (* will be inferred to (int -> ML int) or just (int -> int) *)
 (* We can explicitly set type to (int -> Dv int) *)
 ```
 
@@ -172,20 +172,20 @@ type pos = x:nat{x >= 1}
 val fib : nat -> Tot pos
 let rec fib n =
   if n <= 1 then 1 else fib (n - 1) + fib (n - 2)
-  
+
 val fibIsIncreasing : n:nat{n >= 2} -> Lemma (fib n >= n)
 let rec fibIsIncreasing n =
   match n with
   | 2 -> ()
   | _ -> fibIsIncreasing (n - 1)
-  
+
   (* induction step simplified, using admit() *)
   val fibIsIncreasing : n:nat{n >= 2} -> Lemma (fib n >= n)
 let rec fibIsIncreasing n =
   match n with
   | 2 -> ()
   | _ -> admit()
-  
+
   (* or even automatically, experimental *)
     val fibIsIncreasing : n:nat{n >= 2} -> Lemma (fib n >= n)
   let rec fibIsIncreasing n = by_induction_on n fibIsIncreasing
@@ -278,3 +278,32 @@ let rec appendMemGiven l1 l2 a =
 * *extrinsic* proving uses lemmas
 
 It's not always possible to prove properties using *intrinsic* constraints. Example property is that double-reversing a list is the identity function.
+
+### Higher-order functions on lists
+
+```fsharp
+let rec map f l =
+    match l with
+        | [] -> []
+        | hd :: tl -> f hd :: map f tl
+```
+
+The type of `map` is
+
+```fsharp
+    val map: ('a -> 'b) -> list 'a -> list 'b
+```
+
+which, more explicitly, is
+
+```fsharp
+    val map: ('a -> ML 'b) -> Tot (list 'a -> ML (list 'b))
+```
+
+It is possible to specify *different* type:
+```fsharp
+val map: ('a -> Tot 'b) -> list 'a -> Tot (list 'b)
+```
+which is not same at all.
+
+**Not solved `4f`.**

@@ -66,3 +66,56 @@ let rec reverse = function
 
 let snoc l h = append l [h]
 
+val snocCons: l:list 'a -> h: 'a -> Lemma (reverse (snoc l h) = h::reverse l)
+let rec snocCons l h =
+  match l with
+    | [] -> ()
+    | hd :: tl -> snocCons tl h
+
+val revInvolutive: l: list 'a -> Lemma (reverse (reverse l) = l)
+let rec revInvolutive l =
+  match l with
+    | [] -> ()
+    | hd :: tl -> revInvolutive tl; snocCons (reverse tl) hd
+
+(* val revInjective: l1: list 'a -> l2: list 'a ->
+  Lemma
+  (requires (reverse l1 = reverse l2))
+  (ensures (l1 = l2))
+let rec revInjective l1 l2 = revInvolutive l1; revInvolutive l2 *)
+
+
+val find: f: ('a -> Tot bool) -> list 'a -> Tot (option (x: 'a{f x}))
+let rec find f l =
+  match l with
+    | [] -> None
+    | hd :: tl -> if f hd then Some hd else find f tl
+
+
+val find' : f:('a -> Tot bool) -> list 'a -> Tot (option 'a)
+let rec find' f l = match l with
+  | [] -> None
+  | hd::tl -> if f hd then Some hd else find' f tl
+
+
+val findPredicate: f: ('a -> Tot bool) -> l: list 'a -> x: 'a ->
+  Lemma (requires (find' f l = Some x)) (ensures (f x))
+let rec findPredicate f l x =
+  match l with
+    | [] -> ()
+    | hd :: tl -> if f hd then () else findPredicate f tl x
+
+
+val foldl: ('a -> 'b -> 'b) -> list 'a -> 'b -> 'b
+let rec foldl f l acc =
+  match l with
+    | [] -> acc
+    | hd :: tl -> foldl f tl (f hd acc)
+
+
+val foldlConsIsReverse: l: list 'a -> l': list 'a ->
+  Lemma (foldl Cons l l' = append (reverse l) l')
+let rec foldlConsIsReverse l l' =
+  match l with
+    | [] -> ()
+    | hd :: tl -> foldlConsIsReverse tl l'
